@@ -1,10 +1,10 @@
 const ERT = artifacts.require('./ERT.sol');
 const Controller = artifacts.require('./Controller.sol');
 const StakeAndYield = artifacts.require("./StakeAndYield.sol");
-const YearnStrategy = artifacts.require('./YearnStrategy.sol')
+const YearnStrategy = artifacts.require('./YearnCrvAETHStrategy.sol')
 
-const toWei = (number) => number * Math.pow(10, 6);
-const fromWei = (x) => x/1e6;
+const toWei = (number) => web3.utils.toWei(number.toString());
+const fromWei = (x) => web3.utils.fromWei(x);
 const addr0 = "0x0000000000000000000000000000000000000000";
 const bytes0 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
@@ -91,12 +91,13 @@ contract('Controller', accounts => {
             controller.address);
         const stra = await createStrategy(vault.address,
             controller.address);
-
+        // console.log((await stra.getTest()).toString());
         await controller.addStrategy(
             vault.address, stra.address, 
             token.address, toWei(1),
             {from:admin}
         );
+
         await token.mint(accounts[2], toWei(1000), {from:admin});
 
         await token.approve(vault.address, toWei(10000), 
@@ -106,17 +107,19 @@ contract('Controller', accounts => {
 
         //console.log(fromWei(await stra.pendingBalance()));
 
-        await vault.notifyRewardAmount(toWei(10), 2, {from:admin});
+        //await vault.notifyRewardAmount(toWei(10), 2, {from:admin});
 
-        await timeController.addDays(90);
+        //await timeController.addDays(90);
         
-        await vault.setExit(true, {from: accounts[2]});
+        //await vault.setExit(true, {from: accounts[2]});
 
         // console.log(
         //     fromWei(await vault.earned(accounts[2], {from: accounts[2]}))
         // );
         //await stra.epoch(toWei(0.1), {from:admin});
 
+        await stra.epoch(toWei(0.22576099210823), {from: admin});
+        print(aa);
     });
 
 });
