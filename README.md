@@ -1,4 +1,4 @@
-# Deus Stake & Yeild conntracts
+# Deus Stake & Yeild contracts
 
 # Compile
 $ npm install  
