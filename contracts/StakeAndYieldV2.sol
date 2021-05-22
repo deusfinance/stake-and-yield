@@ -66,6 +66,8 @@ contract StakeAndYieldV2 is Ownable {
     uint256 constant BOTH = 3;
 
     uint256 public PERIOD = 24 hours;
+
+    //TODO: change to 68 days
     uint256 public EXIT_PERIOD = 90 days;
 
     uint256 public lastUpdateTime;
@@ -125,6 +127,8 @@ contract StakeAndYieldV2 is Ownable {
 
     uint256 public scale = 1e18;
 
+    uint256 public birthDate;
+
     uint256 public daoShare;
     address public daoWallet;
 
@@ -163,6 +167,7 @@ contract StakeAndYieldV2 is Ownable {
 
         operator = msg.sender;
         oldContract = _oldContract;
+        birthDate = now;
     }
 
     modifier onlyOwnerOrController(){
@@ -188,6 +193,8 @@ contract StakeAndYieldV2 is Ownable {
                     ,,,,,,ints[2],oldExit,ints[0],,ints[1]
                 ) = StakeAndYieldV1(oldContract).users(account);
                 if(oldStakeType > 0){
+                    //lastClaimTime should be < birthdate of new contract
+                    require(ints[1] <= birthDate, "lastCliamTime > birthDate");
                     users[account].exit = oldExit;
                     users[account].exitStartTime = ints[0];
                     users[account].lastCliamTime = ints[1];
