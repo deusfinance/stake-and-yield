@@ -237,6 +237,56 @@ contract('Controller', accounts => {
         assert.equal(fromWei(balance), 100, "100% exit balance mismatch");
     });
 
+    it('claim', async() => {
+        const controller = await createController();
+        const token = await createToken();
+
+        const vault = await createStake(token.address, 
+            controller.address);
+        const stra = await createStrategy(vault.address,
+            controller.address);
+        
+        await controller.addStrategy(
+            vault.address, stra.address, 
+            token.address, toWei(1),
+            token.address, token.address,
+            {from:admin}
+        );
+
+        //deploy second contract
+        const vault2 = await createStakeV2(token.address, 
+            controller.address, vault.address);
+        const stra2 = await createStrategy(vault2.address,
+            controller.address);
+
+        // deposit to old contract
+        await token.mint(accounts[2], toWei(10000), {from:admin});
+        await token.approve(vault2.address, toWei(10000), 
+            {from:accounts[2]} );
+        await vault2.deposit(toWei(10000), 2, false, {from:accounts[2]});
+
+        //time shift
+        await vault2.notifyRewardAmount(toWei(1000), 2, {
+            from:admin
+        });
+        await timeController.addDays(3);
+        var b = await vault2.earned(accounts[2]);
+        assert.equal(fromWei(b), 1000);
+
+        //unfreeze should claim
+        var balanceBefore = await token.balanceOf(accounts[2]);
+        await vault2.unfreezeAllAndClaim({from: accounts[2]});
+        
+        var b = await vault2.earned(accounts[2]);
+        assert.equal(fromWei(b), 1000);
+
+        await vault2.claim({from: accounts[2]});
+        var balanceAfter = await token.balanceOf(accounts[2]);
+
+        assert.equal(parseFloat(fromWei(balanceAfter)) - parseFloat(fromWei(balanceBefore)), 1000);
+        //console.log(fromWei(balanceBefore), fromWei(balanceAfter));
+    });
+
     it('create test', async() => {
         return;
         const controller = await createController();

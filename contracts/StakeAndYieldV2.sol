@@ -46,7 +46,7 @@ interface StakeAndYieldV1 {
         bool exit,
         uint256 exitStartTime,
         uint256 exitAmountTillNow,
-        uint256 lastCliamTime
+        uint256 lastClaimTime
     );
 
     function userInfo(address account) external view returns(
@@ -82,7 +82,6 @@ contract StakeAndYieldV2 is Ownable {
 
     uint256 public _totalYieldWithdrawed = 0;
     uint256 public _totalExit = 0;
-    uint256 public _totalBurned = 0;
 
     // false: withdraw from YEARN and then pay the user
     // true: pay the user before withdrawing from YEARN
@@ -113,9 +112,11 @@ contract StakeAndYieldV2 is Ownable {
         uint256 exitStartTime;
         uint256 exitAmountTillNow;
 
-        uint256 lastCliamTime;
-
+        uint256 lastClaimTime;
     }
+
+    mapping (address => uint256) pendingEarneds;
+    mapping (address => uint256) pendingEarnedYields;
 
     using SafeMath for uint256;
 
@@ -124,8 +125,6 @@ contract StakeAndYieldV2 is Ownable {
     uint256 public lastUpdatedBlock;
 
     uint256 public periodFinish = 0;
-
-    uint256 public scale = 1e18;
 
     uint256 public birthDate;
 
@@ -139,6 +138,9 @@ contract StakeAndYieldV2 is Ownable {
     StandardToken public yieldRewardToken;
 
     address public oldContract;
+
+    // uint256 public totalExitRewards;
+    // uint256 public totalExitRewardsYield;
 
     event Deposit(address user, uint256 amount, uint256 stakeType);
     event Withdraw(address user, uint256 amount, uint256 stakeType);
@@ -194,10 +196,10 @@ contract StakeAndYieldV2 is Ownable {
                 ) = StakeAndYieldV1(oldContract).users(account);
                 if(oldStakeType > 0){
                     //lastClaimTime should be < birthdate of new contract
-                    require(ints[1] <= birthDate, "lastCliamTime > birthDate");
+                    require(ints[1] <= birthDate, "lastClaimTime > birthDate");
                     users[account].exit = oldExit;
                     users[account].exitStartTime = ints[0];
-                    users[account].lastCliamTime = ints[1];
+                    users[account].lastClaimTime = ints[1];
                     users[account].withdrawTime = ints[2];
                     loadOldUser(account);
                 }
@@ -223,24 +225,27 @@ contract StakeAndYieldV2 is Ownable {
 
             (yieldEarned, yieldSubtract) = earned(account, YIELD);
 
-            sendReward(
-                account,
-                stakeEarned, stakeSubtract,
-                yieldEarned, yieldSubtract
-            );
+            // sendReward(
+            //     account,
+            //     stakeEarned, stakeSubtract,
+            //     yieldEarned, yieldSubtract
+            // );
+
+            if(yieldEarned > 0){
+                pendingEarnedYields[account] = yieldEarned;
+                //totalExitRewardsYield += yieldSubtract;
+            }
+            if(stakeEarned > 0){
+                pendingEarneds[account] = stakeEarned;
+                //totalExitRewards += stakeSubtract;
+            }
         }
         if(stakeType == STAKE || stakeType == BOTH){
             rewardTillNowPerToken = rewardPerToken(STAKE);
-            lastUpdateTime = lastTimeRewardApplicable();
-            if (account != address(0)) {
-                users[account].paidRewardPerToken = rewardTillNowPerToken;
-            }
-        }
-
-        if(stakeType == YIELD || stakeType == BOTH){
             yieldRewardTillNowPerToken = rewardPerToken(YIELD);
             lastUpdateTime = lastTimeRewardApplicable();
             if (account != address(0)) {
+                users[account].paidRewardPerToken = rewardTillNowPerToken;
                 users[account].yieldPaidRewardPerToken = yieldRewardTillNowPerToken;
             }
         }
@@ -261,7 +266,7 @@ contract StakeAndYieldV2 is Ownable {
                 ,//exit,
                 ,//exitStartTime,
                 ,//exitAmountTillNow,
-                //lastCliamTime
+                //lastClaimTime
             ) = StakeAndYieldV1(oldContract).users(account);
     }
 
@@ -288,9 +293,9 @@ contract StakeAndYieldV2 is Ownable {
     function withdrawToBurn() public onlyOwner{
         stakedToken.transfer(
             msg.sender,
-            _totalExit.sub(_totalBurned)
+            _totalExit
         );
-        _totalBurned = _totalExit;
+        _totalExit = 0;
     }
 
     function earned(address account, uint256 stakeType) public view returns(uint256, uint256) {
@@ -307,8 +312,8 @@ contract StakeAndYieldV2 is Ownable {
         uint256 substract = 0;
         if(user.exit){
             uint256 startDate = user.exitStartTime;
-            if(user.lastCliamTime > startDate){
-                startDate = user.lastCliamTime;
+            if(user.lastClaimTime > startDate){
+                startDate = user.lastClaimTime;
             }
             uint256 daysIn = (block.timestamp - startDate) / 1 days;
             uint256 exitPeriodDays = EXIT_PERIOD/1 days;
@@ -319,7 +324,9 @@ contract StakeAndYieldV2 is Ownable {
                 exitRewardDenominator
             );
         }
-        return (amount.sub(substract), substract);
+        uint256 pending = stakeType == STAKE ? 
+            pendingEarneds[account] : pendingEarnedYields[account];
+        return (amount.sub(substract) + pending, substract);
     }
 
     function earned(address account) public view returns(uint256){
@@ -384,8 +391,8 @@ contract StakeAndYieldV2 is Ownable {
         uint256 yieldEarned, uint256 yieldSubtract
     ) private {
         User storage user = users[userAddress];
-		uint256 _daoShare = stakeEarned.mul(daoShare).div(scale);
-        uint256 _yieldDaoShare = yieldEarned.mul(daoShare).div(scale);
+		uint256 _daoShare = stakeEarned.mul(daoShare).div(1 ether);
+        uint256 _yieldDaoShare = yieldEarned.mul(daoShare).div(1 ether);
 
         if(stakeEarned > 0){
             rewardToken.transfer(userAddress, stakeEarned.sub(_daoShare));
@@ -412,12 +419,16 @@ contract StakeAndYieldV2 is Ownable {
         }
 
         if(stakeSubtract > 0){
-            notifyRewardAmountInternal(stakeSubtract, STAKE);
+            //notifyRewardAmountInternal(stakeSubtract, STAKE);
+            //totalExitRewards += stakeSubtract;
         }
         if(yieldSubtract > 0){
-            notifyRewardAmountInternal(yieldSubtract, YIELD);
+            //notifyRewardAmountInternal(yieldSubtract, YIELD);
+            //totalExitRewardsYield += yieldSubtract;
         }
-        user.lastCliamTime = block.timestamp;
+        user.lastClaimTime = block.timestamp;
+        pendingEarneds[userAddress] = 0;
+        pendingEarnedYields[userAddress] = 0;
 	}
 
     function sendExitToken(address _user, uint256 amount) private {
@@ -430,7 +441,22 @@ contract StakeAndYieldV2 is Ownable {
     function claim() 
         importUser(msg.sender)
         updateReward(msg.sender, 0) public {
-        // updateReward handles everything
+
+        uint256 stakeEarned;
+        uint256 stakeSubtract;
+
+        (stakeEarned, stakeSubtract) = earned(msg.sender, STAKE);
+
+        uint256 yieldEarned;
+        uint256 yieldSubtract;
+
+        (yieldEarned, yieldSubtract) = earned(msg.sender, YIELD);
+
+        sendReward(
+            msg.sender,
+            stakeEarned, stakeSubtract,
+            yieldEarned, yieldSubtract
+        );
     }
 
     function setExit(bool _val) 
