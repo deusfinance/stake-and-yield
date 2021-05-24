@@ -62,6 +62,9 @@ interface ICurve{
 contract YearnCrvAETHStrategy is Ownable {
     using SafeMath for uint256;
 
+    uint256 public PERIOD = 7 days;
+    uint256 public START_PERIOD = now;
+
      uint256 public lastEpochTime;
      uint256 public lastBalance;
      uint256 public lastYieldWithdrawed;
@@ -214,6 +217,11 @@ contract YearnCrvAETHStrategy is Ownable {
         return lastEpochTime;
     }
 
+    function getNextEpochTime() public view returns(uint256){
+        uint256 periods = (now - START_PERIOD)/PERIOD;
+        return START_PERIOD + (periods+1)*PERIOD;
+    }
+
     function setYearnFeesPercent(uint256 _val) public onlyOwner{
         yearnFeesPercent = _val;
     }
@@ -237,6 +245,11 @@ contract YearnCrvAETHStrategy is Ownable {
         if(_vault != address(0)){
             vault = IStakeAndYield(_vault);
         }
+    }
+
+    function setPeriods(uint256 period, uint256 startPeriod) public onlyOwner{
+        PERIOD = period;
+        START_PERIOD = startPeriod;
     }
 
     function emergencyWithdrawETH(uint256 amount, address addr) public onlyOwner{

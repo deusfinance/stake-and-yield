@@ -9,6 +9,7 @@ const fromWei = (x) => web3.utils.fromWei(x);
 const addr0 = "0x0000000000000000000000000000000000000000";
 const bytes0 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
+const PERIOD = 7; //days
 
 const transaction = (address, wei) => ({
     from: address,
@@ -218,7 +219,7 @@ contract('Controller', accounts => {
         var balance = await vault2.exitBalance(accounts[2], {
             from: accounts[2]
         });
-        assert.equal(fromWei(balance), 10, "10% exit balance mismatch");
+        assert.equal(parseFloat(fromWei(balance)).toFixed(2), 10, "10% exit balance mismatch");
         
         //time shift
         await timeController.addDays(45-9);
@@ -267,27 +268,91 @@ contract('Controller', accounts => {
 
         //time shift
         await vault2.notifyRewardAmount(toWei(1000), 2, {
-            from:admin
+            from: admin
         });
-        await timeController.addDays(3);
+        await timeController.addDays(PERIOD+1);
         var b = await vault2.earned(accounts[2]);
-        assert.equal(fromWei(b), 1000);
+        assert.equal((parseFloat(fromWei(b)) - 1000).toFixed(2), 0);
 
-        //unfreeze should claim
         var balanceBefore = await token.balanceOf(accounts[2]);
-        await vault2.unfreezeAllAndClaim({from: accounts[2]});
+        //await vault2.unfreezeAllAndClaim({from: accounts[2]});
         
         var b = await vault2.earned(accounts[2]);
-        assert.equal(fromWei(b), 1000);
+        assert.equal((parseFloat(fromWei(b)) - 1000).toFixed(2), 0);
+
+        var r = await vault2.earned(accounts[2], 2, {from:accounts[2]});
+        //console.log(fromWei(r[0]));
 
         await vault2.claim({from: accounts[2]});
         var balanceAfter = await token.balanceOf(accounts[2]);
 
-        assert.equal(parseFloat(fromWei(balanceAfter)) - parseFloat(fromWei(balanceBefore)), 1000);
         //console.log(fromWei(balanceBefore), fromWei(balanceAfter));
+
+        b = await vault2.earned(accounts[2]);
+        assert.equal(fromWei(b), 0);
+
+        assert.equal(((parseFloat(fromWei(balanceAfter)) - parseFloat(fromWei(balanceBefore)))-1000).toFixed(2), 0);
 
         var b = await vault2.earned(accounts[2]);
         assert.equal(fromWei(b), 0);
+    });
+
+    it('unfreeze and withdraw', async() => {
+        const controller = await createController();
+        const token = await createToken();
+
+        const vault = await createStake(token.address, 
+            controller.address);
+        const stra = await createStrategy(vault.address,
+            controller.address);
+        
+        await controller.addStrategy(
+            vault.address, stra.address, 
+            token.address, toWei(1),
+            token.address, token.address,
+            {from:admin}
+        );
+
+        //deploy second contract
+        const vault2 = await createStakeV2(token.address, 
+            controller.address, vault.address);
+        const stra2 = await createStrategy(vault2.address,
+            controller.address);
+
+        await controller.addStrategy(
+            vault2.address, stra2.address, 
+            token.address, toWei(1),
+            token.address, token.address,
+            {from:admin}
+        );
+
+        // deposit to old contract
+        await token.mint(accounts[2], toWei(10000), {from:admin});
+        await token.approve(vault2.address, toWei(10000), 
+            {from:accounts[2]} );
+        await vault2.deposit(toWei(10000), 2, false, {from:accounts[2]});
+
+        await vault2.unfreezeAllAndClaim({from: accounts[2]});
+
+        await revertExpectedError(
+            vault2.withdrawUnfreezed({from: accounts[2]})
+        );
+
+        await timeController.addDays(6);
+
+        await revertExpectedError(
+            vault2.withdrawUnfreezed({from: accounts[2]})
+        );
+
+        await timeController.addDays(2);
+        await vault2.withdrawUnfreezed({from: accounts[2]});
+
+        assert.equal(fromWei(
+            await vault2.earned(accounts[2])
+        ), 0);
+        assert.equal(fromWei(
+            (await vault2.users(accounts[2])).balance
+        ), 0);
     });
 
     it('create test', async() => {

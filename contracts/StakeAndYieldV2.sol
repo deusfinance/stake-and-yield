@@ -36,7 +36,7 @@ interface IController {
 }
 
 interface IStrategy {
-    function getLastEpochTime() external view returns(uint256);
+    function getNextEpochTime() external view returns(uint256);
 }
 
 interface StakeAndYieldV1 {
@@ -72,7 +72,9 @@ contract StakeAndYieldV2 is Ownable {
     uint256 constant YIELD = 2;
     uint256 constant BOTH = 3;
 
-    uint256 public PERIOD = 24 hours;
+    uint256 public PERIOD = 7 days;
+
+    uint256 public EPOCH_PERIOD = 24 hours;
 
     //TODO: change to 68 days
     uint256 public EXIT_PERIOD = 90 days;
@@ -146,8 +148,8 @@ contract StakeAndYieldV2 is Ownable {
 
     address public oldContract;
 
-    // uint256 public totalExitRewards;
-    // uint256 public totalExitRewardsYield;
+    uint256 public totalExitRewards;
+    uint256 public totalExitRewardsYield;
 
     event Deposit(address user, uint256 amount, uint256 stakeType);
     event Withdraw(address user, uint256 amount, uint256 stakeType);
@@ -155,6 +157,8 @@ contract StakeAndYieldV2 is Ownable {
     event Unfreeze(address user, uint256 amount, uint256 stakeType);
     event EmergencyWithdraw(address user, uint256 amount);
     event RewardClaimed(address user, uint256 amount, uint256 stakeType);
+
+    event Int(uint256 i);
 
     constructor (
 		address _stakedToken,
@@ -240,21 +244,20 @@ contract StakeAndYieldV2 is Ownable {
 
             if(yieldEarned > 0){
                 pendingEarnedYields[account] = yieldEarned;
-                //totalExitRewardsYield += yieldSubtract;
+                totalExitRewardsYield += yieldSubtract;
             }
             if(stakeEarned > 0){
                 pendingEarneds[account] = stakeEarned;
-                //totalExitRewards += stakeSubtract;
+                totalExitRewards += stakeSubtract;
             }
         }
-        if(stakeType == STAKE || stakeType == BOTH){
-            rewardTillNowPerToken = rewardPerToken(STAKE);
-            yieldRewardTillNowPerToken = rewardPerToken(YIELD);
-            lastUpdateTime = lastTimeRewardApplicable();
-            if (account != address(0)) {
-                users[account].paidRewardPerToken = rewardTillNowPerToken;
-                users[account].yieldPaidRewardPerToken = yieldRewardTillNowPerToken;
-            }
+        
+        rewardTillNowPerToken = rewardPerToken(STAKE);
+        yieldRewardTillNowPerToken = rewardPerToken(YIELD);
+        lastUpdateTime = lastTimeRewardApplicable();
+        if (account != address(0)) {
+            users[account].paidRewardPerToken = rewardTillNowPerToken;
+            users[account].yieldPaidRewardPerToken = yieldRewardTillNowPerToken;
         }
         _;
     }
@@ -293,8 +296,9 @@ contract StakeAndYieldV2 is Ownable {
         operator = _addr;
     }
 
-    function setPeriod(uint256 period) public onlyOwner{
+    function setPeriod(uint256 period, uint256 epochPeriod) public onlyOwner{
         PERIOD = period;
+        EPOCH_PERIOD = epochPeriod;
     }
 
     function withdrawToBurn() public onlyOwner{
@@ -427,11 +431,11 @@ contract StakeAndYieldV2 is Ownable {
 
         if(stakeSubtract > 0){
             //notifyRewardAmountInternal(stakeSubtract, STAKE);
-            //totalExitRewards += stakeSubtract;
+            totalExitRewards += stakeSubtract;
         }
         if(yieldSubtract > 0){
             //notifyRewardAmountInternal(yieldSubtract, YIELD);
-            //totalExitRewardsYield += yieldSubtract;
+            totalExitRewardsYield += yieldSubtract;
         }
         user.lastClaimTime = block.timestamp;
         pendingEarneds[userAddress] = 0;
@@ -448,7 +452,11 @@ contract StakeAndYieldV2 is Ownable {
     function claim() 
         importUser(msg.sender)
         updateReward(msg.sender, 0) public {
+        
+        claimInternal();
+    }
 
+    function claimInternal() private{
         uint256 stakeEarned;
         uint256 stakeSubtract;
 
@@ -481,6 +489,7 @@ contract StakeAndYieldV2 is Ownable {
 
     function unfreezeAllAndClaim() public{
         unfreeze(users[msg.sender].balance);
+        claimInternal();
     }
 
     function unfreeze(uint256 amount) 
@@ -546,16 +555,17 @@ contract StakeAndYieldV2 is Ownable {
         require(user.withdrawable > 0 || user.withdrawableExit > 0, 
             "amount is 0");
         
-        uint256 lastEpochTime = IStrategy(
+        uint256 nextEpochTime = IStrategy(
             controller.getStrategy(address(this))
-        ).getLastEpochTime();
-        require(user.withdrawTime < lastEpochTime,
-            "Can't withdraw yet");
+        ).getNextEpochTime();
+
+        require(nextEpochTime.sub(PERIOD).sub(EPOCH_PERIOD) >=  user.withdrawTime ||
+            allowEmergencyWithdraw, "not withdrawable yet");
 
         if(user.withdrawable > 0){
             stakedToken.transfer(address(msg.sender), user.withdrawable);
             emit Withdraw(msg.sender, user.withdrawable, YIELD);
-            user.withdrawable = 0;    
+            user.withdrawable = 0;
         }
 
         if(user.withdrawableExit > 0){
@@ -691,7 +701,7 @@ contract StakeAndYieldV2 is Ownable {
 
         numbers[14] = IStrategy(
             controller.getStrategy(address(this))
-        ).getLastEpochTime();
+        ).getNextEpochTime();
     }
 
     function setController(address _controller) public onlyOwner{
