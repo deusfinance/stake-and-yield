@@ -599,10 +599,10 @@ contract StakeAndYieldV2 is Ownable {
         }
         uint256 portion = (block.timestamp - user.exitStartTime).mul(1 ether).div(EXIT_PERIOD);
         portion = portion >= 1 ether ? 1 ether : portion;
+
+        uint256 notExitedBalance = user.balance.sub(user.exitAmountTillNow);
         
-        uint256 balance = user.exitAmountTillNow.add(
-                user.balance.mul(portion).div(1 ether)
-        );
+        uint256 balance = user.exitAmountTillNow.add(notExitedBalance.mul(portion).div(1 ether));
         return balance > user.balance ? user.balance : balance;
     }
 
