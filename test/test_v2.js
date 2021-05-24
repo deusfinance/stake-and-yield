@@ -285,6 +285,9 @@ contract('Controller', accounts => {
 
         assert.equal(parseFloat(fromWei(balanceAfter)) - parseFloat(fromWei(balanceBefore)), 1000);
         //console.log(fromWei(balanceBefore), fromWei(balanceAfter));
+
+        var b = await vault2.earned(accounts[2]);
+        assert.equal(fromWei(b), 0);
     });
 
     it('create test', async() => {

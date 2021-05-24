@@ -2,6 +2,13 @@ pragma solidity 0.6.12;
 
 // SPDX-License-Identifier: MIT
 
+//TODO:
+//1- change exit period
+//2- change period to 7 days
+//3- get old fields from old contract
+//4- change withdrawable time
+
+
 import "./SafeMath.sol";
 import "./Ownable.sol";
 
