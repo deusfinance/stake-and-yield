@@ -14,6 +14,10 @@ const fromWei = (x) => web3.utils.fromWei(x);
 const addr0 = "0x0000000000000000000000000000000000000000";
 const bytes0 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 const ethBalance = (address) => web3.eth.getBalance(address);
+const roundBN = (bn, n=3) => {
+    const coefficient = 10**n;
+    return Math.round(parseFloat(fromWei(bn)) * coefficient) / coefficient;
+}
 
 module.exports = {
 	timeController,
@@ -24,6 +28,7 @@ module.exports = {
 	addr0,
 	bytes0,
 	ethBalance,
+	roundBN,
 
 	TYPE_STAKE, TYPE_YIELD, TYPE_BOTH,
 	EXIT_TRUE, EXIT_FALSE, 

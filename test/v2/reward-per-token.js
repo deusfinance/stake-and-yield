@@ -10,6 +10,7 @@ const {
     toWei, 
     addr0, bytes0,
     ethBalance,
+    roundBN,
     TYPE_STAKE, TYPE_YIELD, TYPE_BOTH,
     EXIT_TRUE, EXIT_FALSE,
 } = require('../helpers');
@@ -49,6 +50,13 @@ contract('StakeAndYieldV2', accounts => {
         const vault2 = await createStakeV2(token.address, controller.address, vault.address);
         const stra2 = await YearnStrategy.new(vault2.address, controller.address, {from: admin});
 
+        await controller.addStrategy(
+            vault2.address, stra2.address,
+            token.address, toWei(1),
+            token.address, token.address,
+            {from:admin}
+        );
+
         return {
             controller,
             token,
@@ -59,8 +67,9 @@ contract('StakeAndYieldV2', accounts => {
         }
     }
 
-    it('scenario #1', async() => {
+    it('reward-per-token scenario #1', async() => {
         const {controller, token, vault, stra, vault2, stra2} = await deployAllContracts()
+        const PERIOD = parseInt(await vault2.PERIOD.call());
         let rewardPerToken;
 
         // deposit to old contract
@@ -68,26 +77,27 @@ contract('StakeAndYieldV2', accounts => {
         await token.approve(vault2.address, toWei(10000), {from:accounts[2]} );
 
         await vault2.deposit(toWei(100), TYPE_YIELD, EXIT_TRUE, {from:accounts[2]});
-        await vault2.notifyRewardAmount(toWei(480), TYPE_YIELD, {from:accounts[1]});
+        await vault2.notifyRewardAmount(toWei(480), TYPE_YIELD, {from:admin});
 
         rewardPerToken = await vault2.rewardPerToken(TYPE_YIELD);
-        assert.equal(fromWei(rewardPerToken), 0, "#1 rewardPerToken mismatch");
+        assert.equal(roundBN(rewardPerToken), 0, "#1 rewardPerToken mismatch");
 
-        await timeController.addHours(12);
+        await timeController.addSeconds(PERIOD/2);
         rewardPerToken = await vault2.rewardPerToken(TYPE_YIELD);
-        assert.equal(fromWei(rewardPerToken), 2.4, "#2 rewardPerToken mismatch");
+        assert.equal(roundBN(rewardPerToken), 2.4, "#2 rewardPerToken mismatch");
 
-        await timeController.addHours(12);
+        await timeController.addSeconds(PERIOD/2);
         rewardPerToken = await vault2.rewardPerToken(TYPE_YIELD);
-        assert.equal(fromWei(rewardPerToken), 4.8, "#3 rewardPerToken mismatch");
+        assert.equal(roundBN(rewardPerToken), 4.8, "#3 rewardPerToken mismatch");
 
-        await timeController.addHours(12);
+        await timeController.addSeconds(PERIOD/2);
         rewardPerToken = await vault2.rewardPerToken(TYPE_YIELD);
-        assert.equal(fromWei(rewardPerToken), 4.8, "#3 rewardPerToken mismatch");
+        assert.equal(roundBN(rewardPerToken), 4.8, "#4 rewardPerToken mismatch");
     });
 
-    it('scenario #2', async() => {
+    it('reward-per-token scenario #2', async() => {
         const {controller, token, vault, stra, vault2, stra2} = await deployAllContracts()
+        const PERIOD = parseInt(await vault2.PERIOD.call());
         let rewardPerToken;
 
         // deposit to old contract
@@ -95,25 +105,25 @@ contract('StakeAndYieldV2', accounts => {
         await token.approve(vault2.address, toWei(10000), {from:accounts[2]} );
 
         await vault2.deposit(toWei(100), TYPE_YIELD, EXIT_TRUE, {from:accounts[2]});
-        await vault2.notifyRewardAmount(toWei(480), TYPE_YIELD, {from:accounts[1]});
+        await vault2.notifyRewardAmount(toWei(480), TYPE_YIELD, {from:admin});
 
         rewardPerToken = await vault2.rewardPerToken(TYPE_YIELD);
-        assert.equal(fromWei(rewardPerToken), 0, "#1 rewardPerToken mismatch");
+        assert.equal(roundBN(rewardPerToken), 0, "#1 rewardPerToken mismatch");
 
-        await timeController.addHours(12);
+        await timeController.addSeconds(PERIOD/2);
         rewardPerToken = await vault2.rewardPerToken(TYPE_YIELD);
-        assert.equal(fromWei(rewardPerToken), 2.4, "#2 rewardPerToken mismatch");
+        assert.equal(roundBN(rewardPerToken), 2.4, "#2 rewardPerToken mismatch");
 
         await vault2.deposit(toWei(100), TYPE_YIELD, EXIT_TRUE, {from:accounts[2]});
         rewardPerToken = await vault2.rewardPerToken(TYPE_YIELD);
-        assert.equal(fromWei(rewardPerToken), 1.2, "#3 rewardPerToken mismatch");
+        assert.equal(roundBN(rewardPerToken), 1.2, "#3 rewardPerToken mismatch");
 
-        await timeController.addHours(12);
+        await timeController.addSeconds(PERIOD/2);
         rewardPerToken = await vault2.rewardPerToken(TYPE_YIELD);
-        assert.equal(fromWei(rewardPerToken), 2.4, "#4 rewardPerToken mismatch");
+        assert.equal(roundBN(rewardPerToken), 2.4, "#4 rewardPerToken mismatch");
 
-        await timeController.addHours(96);
+        await timeController.addHours(PERIOD * 4);
         rewardPerToken = await vault2.rewardPerToken(TYPE_YIELD);
-        assert.equal(fromWei(rewardPerToken), 2.4, "#5 rewardPerToken mismatch");
+        assert.equal(roundBN(rewardPerToken), 2.4, "#5 rewardPerToken mismatch");
     });
 });

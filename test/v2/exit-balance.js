@@ -12,6 +12,7 @@ const {
     ethBalance,
     TYPE_STAKE, TYPE_YIELD, TYPE_BOTH,
     EXIT_TRUE, EXIT_FALSE,
+    roundBN,
 } = require('../helpers');
 
 
@@ -109,13 +110,13 @@ contract('Controller', accounts => {
         var balance = await vault2.exitBalance(accounts[2], {
             from: accounts[2]
         });
-        assert.equal(fromWei(balance), 10, "10% exit balance mismatch");
+        assert.equal(roundBN(balance), 10, "10% exit balance mismatch");
         
         //time shift
         await timeController.addDays(45-9);
 
         balance = await vault2.exitBalance(accounts[2], {from: accounts[2]});
-        assert.equal(fromWei(balance), 50, "50% exit balance mismatch");
+        assert.equal(roundBN(balance), 50, "50% exit balance mismatch");
 
         //time shift more than 90 days
         await timeController.addDays(45+5);
@@ -123,7 +124,7 @@ contract('Controller', accounts => {
         balance = await vault2.exitBalance(accounts[2], {
             from: accounts[2]
         });
-        assert.equal(fromWei(balance), 100, "100% exit balance mismatch");
+        assert.equal(roundBN(balance), 100, "100% exit balance mismatch");
     });
 
     it('scenario #2', async() => {
@@ -137,26 +138,26 @@ contract('Controller', accounts => {
         //time shift
         await timeController.addDays(45);
         var balance = await vault2.exitBalance(accounts[2], {from: accounts[2]});
-        assert.equal(fromWei(balance), 50, "#1 exit balance mismatch");
+        assert.equal(roundBN(balance), 50, "#1 exit balance mismatch");
 
         // deposit 150 token
         await vault2.deposit(toWei(150), TYPE_YIELD, EXIT_TRUE, {from:accounts[2]});
         var balance = await vault2.exitBalance(accounts[2], {from: accounts[2]});
-        assert.equal(fromWei(balance), 50, "#2 exit balance mismatch");
+        assert.equal(roundBN(balance), 50, "#2 exit balance mismatch");
 
         //
         await timeController.addDays(45);
         var balance = await vault2.exitBalance(accounts[2], {from: accounts[2]});
-        assert.equal(fromWei(balance), 150, "#3 exit balance mismatch");
+        assert.equal(roundBN(balance), 150, "#3 exit balance mismatch");
 
         // deposit again
         await vault2.deposit(toWei(200), TYPE_YIELD, EXIT_TRUE, {from:accounts[2]});
         var balance = await vault2.exitBalance(accounts[2], {from: accounts[2]});
-        assert.equal(fromWei(balance), 150, "#4 exit balance mismatch");
+        assert.equal(roundBN(balance), 150, "#4 exit balance mismatch");
 
         await timeController.addDays(30);
         var balance = await vault2.exitBalance(accounts[2], {from: accounts[2]});
-        assert.equal(fromWei(balance), 250, "#5 exit balance mismatch");
+        assert.equal(roundBN(balance), 250, "#5 exit balance mismatch");
     });
 
 });
