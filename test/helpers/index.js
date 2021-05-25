@@ -1,5 +1,6 @@
 const timeController = require('./time-controller')
 const wait = require('./wait')
+const expect = require('./expect');
 
 const TYPE_STAKE = 1;
 const TYPE_YIELD = 2;
@@ -17,6 +18,7 @@ const ethBalance = (address) => web3.eth.getBalance(address);
 module.exports = {
 	timeController,
 	wait,
+	expect,
 	toWei,
 	fromWei,
 	addr0,

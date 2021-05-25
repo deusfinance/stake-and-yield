@@ -96,7 +96,7 @@ contract('Controller', accounts => {
         }
     }
 
-    it('senario #1', async() => {
+    it('scenario #1', async() => {
         const {controller, token, vault, stra, vault2, stra2} = await deployAllContracts()
 
         // deposit to old contract
@@ -126,7 +126,7 @@ contract('Controller', accounts => {
         assert.equal(fromWei(balance), 100, "100% exit balance mismatch");
     });
 
-    it('senario #2', async() => {
+    it('scenario #2', async() => {
         const {controller, token, vault, stra, vault2, stra2} = await deployAllContracts()
 
         // deposit to old contract
@@ -157,7 +157,6 @@ contract('Controller', accounts => {
         await timeController.addDays(30);
         var balance = await vault2.exitBalance(accounts[2], {from: accounts[2]});
         assert.equal(fromWei(balance), 250, "#5 exit balance mismatch");
-
     });
 
 });
