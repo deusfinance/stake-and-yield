@@ -4,9 +4,9 @@ pragma solidity 0.6.12;
 
 //TODO:
 //1- change exit period
-//2- change period to 7 days
+//2- change period to 7 days -- DONE
 //3- get old fields from old contract
-//4- change withdrawable time
+//4- change withdrawable time -- DONE
 
 
 import "./SafeMath.sol";
@@ -156,7 +156,7 @@ contract StakeAndYieldV2 is Ownable {
     event Exit(address user, uint256 amount, uint256 stakeType);
     event Unfreeze(address user, uint256 amount, uint256 stakeType);
     event EmergencyWithdraw(address user, uint256 amount);
-    event RewardClaimed(address user, uint256 amount, uint256 stakeType);
+    event RewardClaimed(address user, uint256 amount, uint256 yieldAmount);
 
     event Int(uint256 i);
 
@@ -435,7 +435,7 @@ contract StakeAndYieldV2 is Ownable {
         }
         if(yieldSubtract > 0){
             //notifyRewardAmountInternal(yieldSubtract, YIELD);
-            totalExitRewardsYield += yieldSubtract;
+            ctotalExitRewardsYield += yieldSubtract;
         }
         user.lastClaimTime = block.timestamp;
         pendingEarneds[userAddress] = 0;
