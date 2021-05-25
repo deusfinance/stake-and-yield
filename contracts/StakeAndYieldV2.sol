@@ -221,7 +221,9 @@ contract StakeAndYieldV2 is Ownable {
 
     modifier updateReward(address account, uint256 stakeType) {
         
-        if(users[account].balance > 0){
+        if(users[account].balance > 0 || users[account].withdrawable > 0
+            || users[account].withdrawableExit > 0
+        ){
             stakeType = users[account].stakeType;
         }
         
@@ -296,9 +298,10 @@ contract StakeAndYieldV2 is Ownable {
         operator = _addr;
     }
 
-    function setPeriod(uint256 period, uint256 epochPeriod) public onlyOwner{
+    function setPeriods(uint256 period, uint256 epochPeriod, uint256 _birthDate) public onlyOwner{
         PERIOD = period;
         EPOCH_PERIOD = epochPeriod;
+        birthDate = _birthDate;        
     }
 
     function withdrawToBurn() public onlyOwner{
@@ -364,7 +367,7 @@ contract StakeAndYieldV2 is Ownable {
         require(stakeType==STAKE || stakeType ==YIELD || stakeType==BOTH, "Invalid stakeType");
  
         User storage user = users[_user];
-        require(user.balance == 0 || user.stakeType==stakeType, "Invalid Stake Type");
+        require((user.balance == 0 && user.withdrawable==0 && user.withdrawableExit == 0)|| user.stakeType==stakeType, "Invalid Stake Type");
 
         if(user.exit || (user.balance == 0 && _exit)){
             updateExit(_user);
@@ -435,7 +438,7 @@ contract StakeAndYieldV2 is Ownable {
         }
         if(yieldSubtract > 0){
             //notifyRewardAmountInternal(yieldSubtract, YIELD);
-            ctotalExitRewardsYield += yieldSubtract;
+            totalExitRewardsYield += yieldSubtract;
         }
         user.lastClaimTime = block.timestamp;
         pendingEarneds[userAddress] = 0;
