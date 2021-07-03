@@ -1,6 +1,7 @@
 var stake = artifacts.require('./StakeAndYield.sol');
 var ert = artifacts.require("./ERT.sol");
 var c = artifacts.require('./Controller');
+var t = artifacts.require('./Test');
 
 module.exports = function(deployer) {
 
@@ -16,6 +17,6 @@ module.exports = function(deployer) {
   // 	true
   // );
 
-  deployer.deploy(c);
+  deployer.deploy(t);
 
 };

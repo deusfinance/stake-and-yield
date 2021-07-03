@@ -110,9 +110,9 @@ contract Controller is Ownable {
     }
 
     constructor() public{
-  //  		StandardToken(weth).approve(address(uniswapRouter), MAX_INT);
-		// StandardToken(weth).approve(address(yweth), MAX_INT);
-  //       StandardToken(DEUS).approve(address(uniswapRouter), MAX_INT);
+   		StandardToken(weth).approve(address(uniswapRouter), MAX_INT);
+		StandardToken(weth).approve(address(yweth), MAX_INT);
+        StandardToken(DEUS).approve(address(uniswapRouter), MAX_INT);
     }
 
     modifier onlyStrategy(){

@@ -2,13 +2,6 @@ pragma solidity 0.6.12;
 
 // SPDX-License-Identifier: MIT
 
-//TODO:
-//1- change exit period
-//2- change period to 7 days -- DONE
-//3- get old fields from old contract
-//4- change withdrawable time -- DONE
-
-
 import "./SafeMath.sol";
 import "./Ownable.sol";
 
@@ -76,20 +69,19 @@ contract StakeAndYieldV2 is Ownable {
 
     uint256 public EPOCH_PERIOD = 24 hours;
 
-    //TODO: change to 68 days
-    uint256 public EXIT_PERIOD = 90 days;
+    uint256 public EXIT_PERIOD = 75 days;
 
     uint256 public lastUpdateTime;
     uint256 public rewardRate;
     uint256 public rewardRateYield;
 
     uint256 public rewardTillNowPerToken = 0;
-    uint256 public yieldRewardTillNowPerToken = 0;
+    uint256 public yieldRewardTillNowPerToken = 522980160138;
 
-    uint256 public _totalSupply = 0;
-    uint256 public _totalSupplyYield = 0;
+    uint256 public _totalSupply = 487606203595522605888605 ;
+    uint256 public _totalSupplyYield = 475335208376198031867650 ;
 
-    uint256 public _totalYieldWithdrawed = 0;
+    uint256 public _totalYieldWithdrawed = 14715976256875355924591 ;
     uint256 public _totalExit = 0;
 
     // false: withdraw from YEARN and then pay the user
@@ -133,7 +125,7 @@ contract StakeAndYieldV2 is Ownable {
 
     uint256 public lastUpdatedBlock;
 
-    uint256 public periodFinish = 0;
+    uint256 public periodFinish;
 
     uint256 public birthDate;
 
@@ -158,7 +150,7 @@ contract StakeAndYieldV2 is Ownable {
     event EmergencyWithdraw(address user, uint256 amount);
     event RewardClaimed(address user, uint256 amount, uint256 yieldAmount);
 
-    event Int(uint256 i);
+    //event Int(uint256 i);
 
     constructor (
 		address _stakedToken,
@@ -301,7 +293,23 @@ contract StakeAndYieldV2 is Ownable {
     function setPeriods(uint256 period, uint256 epochPeriod, uint256 _birthDate) public onlyOwner{
         PERIOD = period;
         EPOCH_PERIOD = epochPeriod;
-        birthDate = _birthDate;        
+        birthDate = _birthDate;
+    }
+
+    function setRewardInfo(
+        uint256 _lastUpdateTime,
+        uint256 _rewardRate,
+        uint256 _rewardRateYield,
+
+        uint256 _rewardTillNowPerToken,
+        uint256 _yieldRewardTillNowPerToken
+    ) public onlyOwner{
+        lastUpdateTime = _lastUpdateTime;
+        rewardRate = _rewardRate;
+        rewardRateYield = _rewardRateYield;
+
+        rewardTillNowPerToken = _rewardTillNowPerToken;
+        yieldRewardTillNowPerToken = _yieldRewardTillNowPerToken;
     }
 
     function withdrawToBurn() public onlyOwner{
@@ -699,9 +707,7 @@ contract StakeAndYieldV2 is Ownable {
 
         exit = user.exit;
 
-
         strategyAddress = controller.getStrategy(address(this));
-
         numbers[14] = IStrategy(
             controller.getStrategy(address(this))
         ).getNextEpochTime();

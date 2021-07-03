@@ -2,7 +2,7 @@ const ERT = artifacts.require('./ERT.sol');
 const Controller = artifacts.require('./Controller.sol');
 const StakeAndYield = artifacts.require("./StakeAndYield.sol");
 const StakeAndYieldV2 = artifacts.require("./StakeAndYieldV2.sol");
-const YearnStrategy = artifacts.require('./YearnCrvAETHStrategy.sol')
+const YearnStrategy = artifacts.require('./YearnCrvAETHStrategyV1.sol')
 
 const toWei = (number) => web3.utils.toWei(number.toString());
 const fromWei = (x) => web3.utils.fromWei(x);
