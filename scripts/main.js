@@ -176,7 +176,8 @@ async function run(){
     console.log(`CurveAETH balance: ${fromWei(aETHAmount)}`);
     console.log(`Payout: ${fromWei(rewards)} CurveAETH`)
 
-    rewards = BN('13241008168559061775');
+    rewards = BN(rewards);
+    
     var sDeaRewards = rewards.mul(BN(total.deaETHAmount)).div(
         total.total
     );
