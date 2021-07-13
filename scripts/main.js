@@ -70,8 +70,8 @@ const bptStraContract = new web3.eth.Contract(
 const fromWei = web3.utils.fromWei;
 const toWei = web3.utils.toWei;
 
-const aethPushedToContracts = 1753.86;
-const ethPushedToContracts = 1747;
+const aethPushedToContracts = 1753.86 + 384.5;
+const ethPushedToContracts = 1747 + 373.33;
 
 async function calcETH(amount, path){
     var x = await uniswapRouterContract.methods.getAmountsOut(
