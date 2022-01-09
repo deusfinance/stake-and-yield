@@ -1,3 +1,4 @@
+# DEPRICATED
 # Deus Stake & Yeild contracts
 
 # Compile
